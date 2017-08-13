@@ -1,6 +1,6 @@
 """The program is going to control and obtain data ion mobility spetrometer and save it to excel files"""
 
-import instrument, openpyxl, os
+import instrument, openpyxl, os, numpy
 from tkinter import *
 
 osc=instrument.RigolScope('/dev/usbtmc1') #for me it is usbtmc1
@@ -29,7 +29,8 @@ class LeftSide(Frame):
 		osc.write(b':WAV:MODE NORM')
 		osc.write(b':WAV:DATA?')
 		self.temp=osc.read(9000)
-		print(self.temp.decode()) #this does not work properly
+		self.tempdata=numpy.frombuffer(self.temp)
+		print(self.tempdata) #need testing
 	
 	def stop(self):
 		osc.write(b':STOP')
