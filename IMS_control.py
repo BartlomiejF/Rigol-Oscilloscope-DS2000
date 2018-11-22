@@ -172,12 +172,15 @@ class LeftSide(Frame):
 				time.wait(timegap)
 				length-=timegap
 	
-	def make_3dplot(self, separator):
+	def make_3dplot(self, separator, leftBorder, rightBorder):
 		fig=plt.figure()
 		ax=fig.gca(projection='3d')
 		x=self.data.drop(columns='time')
+		tim=self.data['time']
+		if leftBorder>rightBorder:
+			rightBorder,leftBorder=(leftBorder,rightBorder)
 		for n in range(len(x.columns)):
-			ax.plot(self.data['time'],x.iloc[leftBorder:rightBorder,n], n*separator,zdir='y')
+			ax.plot(tim[leftBorder:rightBorder+1],x.iloc[leftBorder:rightBorder+1,n], n*separator,zdir='y')
 		ax.set_xlabel('drift time (ms)')
 		ax.set_zlabel('intensity')
 		plt.show()
@@ -187,10 +190,12 @@ class LeftSide(Frame):
 			factor=np.arange(0, separator*len(self.data.iloc[:,1:].columns), separator)
 		else:
 			factor=0
-		x=self.data['time']
+		if leftBorder>rightBorder:
+			rightBorder,leftBorder=(leftBorder,rightBorder)
+		x=self.data['time'][leftBorder:rightBorder+1]
 		y=self.data.drop('time', axis=1)+factor
 		for col in y.columns:
-			plt.plot(x,y.loc[leftBorder:rightBorder,col])
+			plt.plot(x,y.loc[leftBorder:rightBorder+1,col])
 		plt.xlabel('drift time (ms)')
 		plt.ylabel('intensity')
 		plt.show()
@@ -296,7 +301,7 @@ class AvgPop(Toplevel):
 		
 while True:
 	try:
-		osc=instrument.RigolScope('/dev/usbtmc1') #you should change usbtmc{nr} to appropriate for your computer and scope
+		osc=instrument.RigolScope('/dev/usbtmc1')
 	except:
 		print('No device connected.')
 		input('Connect device and press Enter.(Or press Ctrl+C to exit)')
