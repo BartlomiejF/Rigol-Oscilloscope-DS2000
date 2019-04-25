@@ -103,7 +103,7 @@ class RigolScope():
 		return result, columns
 		
 	def cvtData2Voltage(self, data):
-		"""data must be numpy array of pandas dataframe
+		"""data must be numpy array or pandas dataframe
 		the conversion formula was taken from scope programming guide, page 572
     http://int.rigol.com/Support/Manual/5 """
 		YRef,YScale,YOffset=self.readDataDefaults()
