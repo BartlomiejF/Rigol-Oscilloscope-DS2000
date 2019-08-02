@@ -13,9 +13,9 @@ class MainFrame(Frame):
 	
 	def __init__(self, parent):
 		super().__init__(parent)
-		# ~ self.scope=scopeclass.RigolScope(dev='/dev/scope/scope')
+		# self.scope=scopeclass.RigolScope(dev='/dev/scope/scope')
 		self.data=pd.DataFrame()
-		# ~ self.data['time']=self.scope.timeAxis
+		# self.data['time']=self.scope.timeAxis
 		self.parent=parent
 		
 		self.createWidgets()
@@ -27,7 +27,7 @@ class MainFrame(Frame):
 		PlotsLabel(parent=self).grid(column=2, row=0, rowspan=2, sticky=N+E+W+S)
 		
 	def exitProgram(self):
-		# ~ self.scope.finish()
+		# self.scope.finish()
 		self.parent.destroy()
 
 
@@ -41,11 +41,11 @@ class ScopeControls(LabelFrame):
 		self.createWidgets()
 		
 	def createWidgets(self):
-		# ~ Button(self, text='Run', command=self.parent.scope.run).grid(sticky=E+W)
+		# Button(self, text='Run', command=self.parent.scope.run).grid(sticky=E+W)
 		Button(self, text='Run', command=None).grid(sticky=E+W)
-		# ~ Button(self, text='Stop', command=self.parent.scope.stop).grid(sticky=E+W)
+		# Button(self, text='Stop', command=self.parent.scope.stop).grid(sticky=E+W)
 		Button(self, text='Stop', command=None).grid(sticky=E+W)
-		# ~ Button(self, text='Clear', command=self.parent.scope.clearWaveform).grid(sticky=E+W)
+		# Button(self, text='Clear', command=self.parent.scope.clearWaveform).grid(sticky=E+W)
 		Button(self, text='Clear', command=None).grid(sticky=E+W)
 		Button(self, text='Quit', command=self.parent.exitProgram).grid(sticky=E+W)
 		
@@ -138,20 +138,23 @@ class MeasurementLabel(LabelFrame):
 		timegap=self.meastimegap.get()
 		timelength=self.timelength.get()
 		if all([name, timegap.isnumeric(), timelength.isnumeric()]):
-			temp, _ =self.parent.scope.longMeasure(length=length, timegap=timegap)
-			columns=[name+'{:03d}'.format(i) for i in range(temp.shape[0])]
+			temp, _ =self.parent.scope.readChromatograph(length=timelength, timegap=timegap)
+			columns=[name+f'{i:03d}' for i in range(temp.shape[0])]
 			self.parent.data=pd.concat([self.parent.data, pd.DataFrame(temp.T, columns=columns)], axis=1)
 		else:
 			messagebox.showerror(title='No name', message='Failed to comply. Enter proper name.')
 			
 	def longMeasure(self):
 		timegap=50*10**-3
-		length=self.longMeas.get()
+		length=self.measFor.get()
 		if length.isnumeric():
-			temp, columns=self.parent.scope.longMeasure(length=length, timegap=timegap)
-			self.parent.data=pd.concat([self.parent.data, pd.DataFrame(temp.T,columns=columns)], axis=1)
-		# ~ #in case there was some problem with indexes
-			# ~ self.parent.data=pd.concat([self.parent.data.reset_index(drop=True),pd.DataFrame(temp.T,columns=columns).reset_index(drop=True)], axis=1)
+			temp, columns = self.parent.scope.readChromatograph(
+				length=length, 
+				timegap=timegap
+				)
+			self.parent.data = pd.concat([self.parent.data, pd.DataFrame(temp.T,columns=columns)], axis=1)
+		# in case there was some problem with indexes
+			# self.parent.data=pd.concat([self.parent.data.reset_index(drop=True),pd.DataFrame(temp.T,columns=columns).reset_index(drop=True)], axis=1)
 		else:
 			messagebox.showerror(title='Not a number', message='Failed to comply. Timelength is not a number.')
 
@@ -161,7 +164,7 @@ class PlotsLabel(LabelFrame):
 	def __init__(self, parent):
 		super().__init__(parent, text='Plots')
 		self.columnconfigure(0,weight=1)
-		
+		self.parent = parent
 		self.createWidgets()
 	
 	def createWidgets(self):	
@@ -187,11 +190,11 @@ class PlotsLabel(LabelFrame):
 			factor=np.arange(0, separator*len(self.parent.data.iloc[:,1:].columns), separator)
 		else:
 			factor=0
-		leftBorder, rigthBorder=(int(self.left_plot_border.get()),int(self.right_plot_border.get()))
+		leftBorder, rightBorder=(int(self.left_plot_border.get()),int(self.right_plot_border.get()))
 		if leftBorder>rightBorder:
 			rightBorder,leftBorder=(leftBorder,rightBorder)
-		x=self.data['time'][leftBorder:rightBorder+1]
-		y=self.data.drop(columns='time')+factor
+		x=self.parent.data['time'][leftBorder:rightBorder+1]
+		y=self.parent.data.drop(columns='time')+factor
 		for col in y.columns:
 			ax.plot(x,y.loc[leftBorder:rightBorder+1,col])
 		ax.set_xlabel('drift time (ms)')
@@ -204,7 +207,7 @@ class PlotsLabel(LabelFrame):
 		x=self.parent.data.drop(columns='time')
 		tim=self.parent.data['time']
 		separator=float(self.sep.get())
-		leftBorder, rigthBorder=(int(self.left_plot_border.get()),int(self.right_plot_border.get()))
+		leftBorder, rightBorder=(int(self.left_plot_border.get()),int(self.right_plot_border.get()))
 		if leftBorder>rightBorder:
 			rightBorder,leftBorder=(leftBorder,rightBorder)
 		for n in range(len(x.columns)):
@@ -219,7 +222,6 @@ class MailPop(Toplevel):
 	def __init__(self,parent):
 		super().__init__(parent)
 		self.parent=parent
-		
 		self.createWidgets()
 		
 	def createWidgets(self):

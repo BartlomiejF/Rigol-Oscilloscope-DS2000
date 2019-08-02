@@ -2,6 +2,7 @@ import os
 import time
 
 import numpy as np
+from scipy.signal import savgol_filter
 
 
 class usbtmc():
@@ -53,6 +54,7 @@ class RigolScope():
 		
 	def readDataDefaults(self):
 		"""These are needed to convert waveform data to voltage"""
+
 		self.sendCommand(b':WAV:YREF?')
 		YRef = float(self.read())
 		self.sendCommand(b':CHAN1:SCAL?')
@@ -82,6 +84,7 @@ class RigolScope():
 		
 	def readBinData(self):
 		"""this simply reads data and returns it as numpy array"""
+
 		self.sendCommand(b':WAV:DATA?')
 		#it seems that regular read(x) function returns finite number of points no matter that the x is very high
 		#so the data must be read in two packages:
@@ -96,7 +99,24 @@ class RigolScope():
 		self.sendCommand(b':WAV:DATA?')
 		return self.read()
 		
-	def longMeasure(self, length, timegap):
+	def readChromatograph(self, length, timegap):
+		""" conduct readings for a longer time with some time period between every reading
+
+			length - time in minutes how long should readings be conducted
+			timegap - time in seconds between subsequent readings
+					  minimal time is 50ms; if timegap > length then there will be single reading
+
+		"""
+
+		if timegap < (50 * 10 ** -3):
+			timegap = 50 * 10 ** -3
+
+		if timegap > length:
+			result = self.readBinData()
+			self.sendCommand(b':ACQ:TYPE AVER')
+			return result
+
+		self.sendCommand(b':ACQ:TYPE NORM')
 		output = np.ndarray(self.timeAxis.shape)
 		for _ in np.arange(0, length*60, timegap):
 			start = time.time()
@@ -106,18 +126,27 @@ class RigolScope():
 		result = self.cvtData2Voltage(output[:,1])
 		columns = np.arange(0,length*60,timegap).astype('str')
 		columns = list(np.core.defchararray.add(columns, np.array('s')))
+		result = self.applySavGolFilter(result)
+
+		self.sendCommand(b':ACQ:TYPE AVER')
+
 		return result, columns
 		
 	def cvtData2Voltage(self, data):
 		"""data must be numpy array or pandas dataframe
 		the conversion formula was taken from scope programming guide, page 572
         http://int.rigol.com/Support/Manual/5 """
-		YRef,YScale,YOffset = self.readDataDefaults()
+
+		YRef, YScale, YOffset = self.readDataDefaults()
 		result = (data-YRef) * YScale - YOffset
 		return result
 		
 	def setAvgs(self, num):
 		self.sendCommand(bytearray(':ACQ:AVER ' + num, encoding='utf-8'))
+
+	def applySavGolFilter(self, data, window_length = 15, polyorder = 2):
+		filtered = savgol_filter(data, window_length, polyorder)
+		return filtered
 		
 	def finish(self):
 		self.scope.close()
